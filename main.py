@@ -39,12 +39,13 @@ def create_cluster(message):
         cluster_payload = {
             "name": cluster_name,
             "providerSettings": {
-                "providerName": "AWS",  # Cloud provider (AWS, AZURE, GCP)
-                "regionName": "US_EAST_1",  # AWS region
-                "instanceSizeName": "M0",  # Free-tier cluster
+                "providerName": "AWS",      # Use 'AWS', 'AZURE', or 'GCP'
+                "regionName": "ap-south-1", # Ensure this region supports M0
+                "instanceSizeName": "M0",  # Free tier instance
             },
             "clusterType": "REPLICASET",
         }
+
 
         # Make the API request to create the cluster
         response = requests.post(
