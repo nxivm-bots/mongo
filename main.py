@@ -40,7 +40,7 @@ def create_cluster(message):
             "name": cluster_name,
             "providerSettings": {
                 "providerName": "AWS",      # Use 'AWS', 'AZURE', or 'GCP'
-                "regionName": "ap-south-1", # Ensure this region supports M0
+                "regionName": "AP_SOUTH_1", # Ensure this region supports M0
                 "instanceSizeName": "M0",  # Free tier instance
             },
             "clusterType": "REPLICASET",
