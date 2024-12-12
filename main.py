@@ -1,73 +1,71 @@
-import telebot
-import requests
-from requests.auth import HTTPDigestAuth
+from pyrogram import Client, filters
+from pymongo import MongoClient
+from bson.json_util import dumps
 
-# Bot token from BotFather
-BOT_TOKEN = "7835615149:AAGXYrwLqYYiXDBXSvGw_y0Mlk3-Gja_yg0"
+# Bot configuration
+API_ID = "29872536"  # Replace with your Telegram API ID
+API_HASH = "65e1f714a47c0879734553dc460e98d6"  # Replace with your Telegram API Hash
+BOT_TOKEN = "7835615149:AAGXYrwLqYYiXDBXSvGw_y0Mlk3-Gja_yg0"  # Replace with your Telegram bot token
 
-# MongoDB Atlas API credentials
-ATLAS_PUBLIC_KEY = "fafcircg"
-ATLAS_PRIVATE_KEY = "0749ff04-e266-443a-9375-8daeb3458b22"
-ATLAS_PROJECT_ID = "6759ec4cb6ed924ed0c2ada5"
-ATLAS_BASE_URL = f"https://cloud.mongodb.com/api/atlas/v1.0"
+# MongoDB configuration
+MONGO_URL = "mongodb+srv://denji3494:denji3494@cluster0.bskf1po.mongodb.net/"
+mongo_client = MongoClient(MONGO_URL)
 
-# Initialize the bot
-bot = telebot.TeleBot(BOT_TOKEN)
+# Initialize bot
+bot = Client("mongoBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Command: /start
-@bot.message_handler(commands=["start"])
-def start(message):
-    bot.reply_to(
-        message,
-        "Welcome to the MongoDB Cluster Bot!\n"
-        "Use /create_cluster <cluster_name> to create a new MongoDB cluster."
+@bot.on_message(filters.command("start"))
+async def start(_, message):
+    await message.reply_text(
+        "Welcome! Use the following commands:\n"
+        "- `/databases`: Show available database names.\n"
+        "- `/getdata <collection_name>`: Fetch data from a MongoDB collection."
     )
 
-# Command: /create_cluster
-@bot.message_handler(commands=["create_cluster"])
-def create_cluster(message):
+@bot.on_message(filters.command("databases"))
+async def show_databases(_, message):
     try:
-        # Extract cluster name from the user's message
-        parts = message.text.split(maxsplit=1)
-        if len(parts) != 2:
-            bot.reply_to(message, "Usage: /create_cluster <cluster_name>")
-            return
-
-        cluster_name = parts[1]
-
-        # API request payload to create a cluster
-        cluster_payload = {
-            "name": cluster_name,
-            "providerSettings": {
-                "providerName": "AWS",      # Use 'AWS', 'AZURE', or 'GCP'
-                "regionName": "AP_SOUTH_1", # Ensure this region supports M0
-                "instanceSizeName": "M0",  # Free tier instance
-            },
-            "clusterType": "REPLICASET",
-        }
-
-
-        # Make the API request to create the cluster
-        response = requests.post(
-            f"{ATLAS_BASE_URL}/groups/{ATLAS_PROJECT_ID}/clusters",
-            json=cluster_payload,
-            auth=HTTPDigestAuth(ATLAS_PUBLIC_KEY, ATLAS_PRIVATE_KEY)
-        )
-
-        if response.status_code == 201:
-            # Extract connection URL
-            cluster_data = response.json()
-            connection_string = cluster_data.get("connectionStrings", {}).get("standardSrv", "URL not available")
-            bot.reply_to(message, f"✅ Cluster '{cluster_name}' created successfully!\nConnection URL:\n{connection_string}")
+        # Fetch the list of databases
+        databases = mongo_client.list_database_names()
+        if not databases:
+            await message.reply_text("No databases found.")
         else:
-            error_msg = response.json().get("detail", "Unknown error")
-            bot.reply_to(message, f"❌ Failed to create cluster. Error: {error_msg}")
-
+            db_list = "\n".join(databases)
+            await message.reply_text(f"Available Databases:\n`{db_list}`", parse_mode="markdown")
     except Exception as e:
-        bot.reply_to(message, f"An error occurred: {e}")
+        await message.reply_text(f"Error: {e}")
 
-# Start the bot
+@bot.on_message(filters.command("getdata"))
+async def get_data(_, message):
+    try:
+        # Extract collection name from the command
+        command_parts = message.text.split()
+        if len(command_parts) < 2:
+            await message.reply_text("Please provide the collection name. Usage: /getdata <collection_name>")
+            return
+        
+        collection_name = command_parts[1]
+        # Assume a default database name for this example
+        db = mongo_client["your_database_name"]  # Replace with your database name
+        collection = db[collection_name]
+        
+        # Fetch data from the collection
+        documents = collection.find()
+        data = [doc for doc in documents]
+        
+        if not data:
+            await message.reply_text(f"No data found in the collection '{collection_name}'.")
+            return
+        
+        # Convert data to JSON for readability
+        json_data = dumps(data, indent=2)
+        if len(json_data) > 4000:  # Telegram message size limit
+            await message.reply_document(("data.json", json_data))
+        else:
+            await message.reply_text(f"Data from '{collection_name}':\n```{json_data}```", parse_mode="markdown")
+    except Exception as e:
+        await message.reply_text(f"Error: {e}")
+
 if __name__ == "__main__":
-    print("Bot is running...")
-    bot.infinity_polling()
-          
+    bot.run()
+    
