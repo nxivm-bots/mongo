@@ -31,7 +31,7 @@ async def show_databases(_, message):
             await message.reply_text("No databases found.")
         else:
             db_list = "\n".join(databases)
-            await message.reply_text(f"Available Databases:\n`{db_list}`", parse_mode="markdown")
+            await message.reply_text(f"Available Databases:\n`{db_list}`")
     except Exception as e:
         await message.reply_text(f"Error: {e}")
 
@@ -46,7 +46,7 @@ async def get_data(_, message):
         
         collection_name = command_parts[1]
         # Assume a default database name for this example
-        db = mongo_client["your_database_name"]  # Replace with your database name
+        db = mongo_client["madflixbotz"]  # Replace with your database name
         collection = db[collection_name]
         
         # Fetch data from the collection
@@ -62,7 +62,7 @@ async def get_data(_, message):
         if len(json_data) > 4000:  # Telegram message size limit
             await message.reply_document(("data.json", json_data))
         else:
-            await message.reply_text(f"Data from '{collection_name}':\n```{json_data}```", parse_mode="markdown")
+            await message.reply_text(f"Data from '{collection_name}':\n```{json_data}```")
     except Exception as e:
         await message.reply_text(f"Error: {e}")
 
